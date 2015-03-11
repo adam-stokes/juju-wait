@@ -45,8 +45,11 @@ def run_or_die(cmd):
         sys.exit(x.returncode or 42)
 
 
-def juju_run(unit, cmd):
-    return run_or_die(['juju', 'run', '--unit', unit, cmd])
+def juju_run(unit, cmd, timeout=None):
+    if timeout is None:
+        timeout = 6 * 60 * 60
+    return run_or_die(['juju', 'run', '--timeout', str(timeout),
+                       '--unit', unit, cmd])
 
 
 def get_status():
