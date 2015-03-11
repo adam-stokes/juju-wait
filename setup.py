@@ -17,7 +17,7 @@
 
 from setuptools import setup, find_packages
 setup(
-    name='juju-relinfo',
+    name='juju-wait',
     version='1.0',
     packages=find_packages(),
     author='Stuart Bishop',
