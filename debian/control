@@ -1,0 +1,29 @@
+Source: juju-wait
+Section: devel
+Priority: extra
+Maintainer: Stuart Bishop (Work) <stuart.bishop@canonical.com>
+Build-Depends: 
+ debhelper,
+ python-all (>= 2.6.6-3~),
+ python-setuptools,
+ python3-all,
+ python3-setuptools
+Standards-Version: 3.9.3
+X-Python3-Version: >= 3.2
+
+Package: juju-wait
+Architecture: all
+Depends:
+ ${python3:Depends},
+ ${misc:Depends},
+ juju-core (>= 1.18.0)
+Description: Juju plugin to wait for environment steady state.
+ This plugin provides the following new juju command:
+ .
+    juju wait
+ .
+ This command waits until all hooks in the environment have completed
+ running and there are no more queued to run. It is primarily used by
+ deployment wrappers and test suites to know when a series on juju
+ commands (which run asynchronously) have completed and the system is ready
+ for the next step.
