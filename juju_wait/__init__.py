@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor as Executor
 import json
 import os
 import subprocess
@@ -48,7 +49,7 @@ def run_or_die(cmd):
 def juju_run(unit, cmd, timeout=None):
     if timeout is None:
         timeout = 6 * 60 * 60
-    return run_or_die(['juju', 'run', '--timeout', str(timeout),
+    return run_or_die(['juju', 'run', '--timeout={}s'.format(timeout),
                        '--unit', unit, cmd])
 
 
@@ -57,6 +58,12 @@ def get_status():
     if json_status is None:
         return None
     return json.loads(json_status)
+
+
+def get_log_tail(unit, timeout=None):
+    log = 'unit-{}.log'.format(unit.replace('/', '-'))
+    cmd = 'sudo tail -1 /var/log/juju/{}'.format(log)
+    return juju_run(unit, cmd, timeout=timeout)
 
 
 def wait_cmd(args=sys.argv[1:]):
@@ -103,10 +110,8 @@ def wait_cmd(args=sys.argv[1:]):
                     ready = False
 
         if ready:
-            for uname in sorted(ready_units):
-                log = 'unit-{}.log'.format(uname.replace('/', '-'))
-                cmd = 'sudo tail -1 /var/log/juju/{}'.format(log)
-                logs.append(juju_run(uname, cmd))
+            with Executor(max_workers=6) as executor:
+                logs = list(executor.map(get_log_tail, sorted(ready_units)))
             if logs == prev_logs:
                 # If all units are in a good state and the logs are
                 # unchanged, we are done waiting.
