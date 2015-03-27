@@ -110,7 +110,7 @@ def wait_cmd(args=sys.argv[1:]):
                     ready = False
 
         if ready:
-            with Executor(max_workers=6) as executor:
+            with Executor(max_workers=1) as executor:
                 logs = list(executor.map(get_log_tail, sorted(ready_units)))
             if logs == prev_logs:
                 # If all units are in a good state and the logs are
