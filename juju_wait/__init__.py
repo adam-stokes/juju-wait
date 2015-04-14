@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor as Executor
 import json
 import os
 import subprocess
@@ -39,10 +38,16 @@ class EnvironmentAction(argparse.Action):
 
 def run_or_die(cmd):
     try:
-        return subprocess.check_output(cmd, universal_newlines=True)
-    except subprocess.CalledProcessError as x:
+        p = subprocess.Popen(cmd, universal_newlines=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = p.communicate()
+        if p.returncode == 0:
+            return out
+        print(err, file=sys.stderr)
+        print("{} failed: {}".format(cmd, p.returncode), file=sys.stderr)
+        sys.exit(p.returncode or 43)
+    except Exception as x:
         print("{} failed: {}".format(x.cmd, x.returncode), file=sys.stderr)
-        print(x.output, file=sys.stderr)
         sys.exit(x.returncode or 42)
 
 
@@ -110,8 +115,7 @@ def wait_cmd(args=sys.argv[1:]):
                     ready = False
 
         if ready:
-            with Executor(max_workers=1) as executor:
-                logs = list(executor.map(get_log_tail, sorted(ready_units)))
+            logs = list(map(get_log_tail, sorted(ready_units)))
             if logs == prev_logs:
                 # If all units are in a good state and the logs are
                 # unchanged, we are done waiting.
