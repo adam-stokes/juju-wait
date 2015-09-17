@@ -1,3 +1,19 @@
+juju-wait (2.0.0) precise; urgency=medium
+
+  * Use Juju 1.24 enhanced status, if available. Fallback if not.
+    The original algorithm was fragile, failing if certain Juju
+    debugging options are enabled on the environment creating
+    unexpected log messages. The new algorithm, when available,
+    is much faster.
+
+  * Add -v and -q options, despite fears that they will be
+    incompatible with a 'wait' command added to juju-core.
+
+  * Code is somewhat restructured to allow better embedding
+    in tools such as Mojo.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Thu, 17 Sep 2015 18:42:03 +0700
+
 juju-wait (1.0.1) precise; urgency=medium
 
   * Do not execute juju run commands in parallel, per lp:1437177
