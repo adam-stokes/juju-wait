@@ -90,7 +90,7 @@ def get_log_tail(unit, timeout=None):
 # quiescent. This may be unnecessary, but protects against races
 # where all units report they are currently idle but there are hooks
 # still due to be run.
-IDLE_CONFIRMATION = timedelta(seconds=5)
+IDLE_CONFIRMATION = timedelta(seconds=10)
 
 
 def wait_cmd(args=sys.argv[1:]):
@@ -130,14 +130,18 @@ def wait(log):
     # in the logs.
     prev_logs = {}
 
+    start = datetime.now()
+
     while True:
         status = get_status()
-        ready = True
+        # We are never ready until this check has been running until
+        # IDLE_CONFIRMATION time has passed. This ensures that if we
+        # run 'juju wait' immediately after an operation such as
+        # 'juju upgrade-charm', then the scheduled operation has had
+        # a chance to fire any hooks it is going to.
+        ready = (datetime.now() > start + IDLE_CONFIRMATION)
 
         all_units = set()
-
-        # Units with started agents that are not dying.
-        live_units = set()
 
         # 'ready' units are up, and might be idle. They need to have their
         # logs sniffed because they are running Juju 1.23 or earlier.
@@ -162,7 +166,6 @@ def wait(log):
                 state = unit.get('agent-status', {}).get('current')
                 since = parse_ts(unit.get('agent-status', {}).get('since'))
                 if alive and started:
-                    live_units.add(uname)
                     if state is not None:
                         # Juju 1.24+
                         now = datetime.now()

@@ -1,3 +1,11 @@
+juju-wait (2.0.1) precise; urgency=medium
+
+  * Ensure we wait for at least a few seconds with 1.24 enanced status checks,
+    to give a command executed immediately before 'juju wait' to be processed
+    and have its hooks fired.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Fri, 18 Sep 2015 17:17:07 +0700
+
 juju-wait (2.0.0) precise; urgency=medium
 
   * Use Juju 1.24 enhanced status, if available. Fallback if not.
