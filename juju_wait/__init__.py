@@ -127,11 +127,12 @@ def wait_cmd(args=sys.argv[1:]):
 
 def reset_logging():
     """If we are running Juju 1.23 or earlier, we require default logging.
-    
+
     Reset the environment log settings to match default juju stable.
     """
     run_or_die(['juju', 'set-environment',
                 'logging-config=juju=WARNING;unit=INFO'])
+
 
 def wait(log):
     # pre-juju 1.24, we can only detect idleless by looking for changes
