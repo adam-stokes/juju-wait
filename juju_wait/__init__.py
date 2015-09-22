@@ -144,7 +144,7 @@ def wait(log):
         ready = (datetime.now() > start + IDLE_CONFIRMATION)
 
         # If there is a dying service, environment is not quiescent.
-        for sname, service in status.get('services', {}).items():
+        for sname, service in sorted(status.get('services', {}).items()):
             if service.get('life') in ('dying', 'dead'):
                 logging.debug('{} is dying'.format(sname))
                 ready = False
@@ -173,7 +173,7 @@ def wait(log):
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
 
-        for uname, astatus in agent_status.items():
+        for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
             if current == 'idle' and since + IDLE_CONFIRMATION < now:
@@ -187,7 +187,7 @@ def wait(log):
         logs = {}
 
         # Sniff logs of units that don't provide agent-status, if necessary.
-        for uname, unit in ready_units.items():
+        for uname, unit in sorted(ready_units.items()):
             dying = unit.get('life') in ('dying', 'dead')
             agent_state = unit.get('agent-state')
             agent_state_info = unit.get('agent-state-info')
