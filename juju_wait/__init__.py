@@ -134,6 +134,8 @@ def wait(log):
 
     while True:
         status = get_status()
+        now = datetime.utcnow()
+
         # We are never ready until this check has been running until
         # IDLE_CONFIRMATION time has passed. This ensures that if we
         # run 'juju wait' immediately after an operation such as
@@ -141,79 +143,82 @@ def wait(log):
         # a chance to fire any hooks it is going to.
         ready = (datetime.now() > start + IDLE_CONFIRMATION)
 
-        all_units = set()
-
-        # 'ready' units are up, and might be idle. They need to have their
-        # logs sniffed because they are running Juju 1.23 or earlier.
-        ready_units = set()
-
-        # 'idle' units are known idle, and have remained idle for a short
-        # while. These units are Juju 1.24 or later.
-        idle_units = set()
-
-        # Log storage to compare with prev_logs.
-        logs = {}
-
+        # If there is a dying service, environment is not quiescent.
         for sname, service in status.get('services', {}).items():
             if service.get('life') in ('dying', 'dead'):
                 logging.debug('{} is dying'.format(sname))
                 ready = False
 
+        all_units = set()  # All units, including subordinates.
+
+        # 'ready' units are up, and might be idle. They need to have their
+        # logs sniffed because they are running Juju 1.23 or earlier.
+        ready_units = {}
+
+        # Flattened agent status for all units and subordinates that
+        # provide it. Note that 'agent status' is only available in
+        # Juju 1.24 and later. This is easily confused with 'agent state'
+        # which is available in earlier versions of Juju.
+        agent_status = {}
+        for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
-                alive = unit.get('life') not in ('dying', 'dead')
-                started = unit.get('agent-state') == 'started'
-                state = unit.get('agent-status', {}).get('current')
-                since = parse_ts(unit.get('agent-status', {}).get('since'))
-                if alive and started:
-                    if state is not None:
-                        # Juju 1.24+
-                        now = datetime.now()
-                        if state == 'idle':
-                            if since + IDLE_CONFIRMATION < now:
-                                logging.debug('{} idle since {}'
-                                              ''.format(uname, since))
-                                idle_units.add(uname)
-                            else:
-                                logging.debug('{} might be idle'.format(uname))
-                        else:
-                            logging.debug('{} is {} since {}'
-                                          ''.format(uname, state, since))
-                    else:
-                        ready_units.add(uname)
+                if 'agent-status' in unit:
+                    agent_status[uname] = unit['agent-status']
                 else:
-                    ready = False
-                    agent_state = unit.get('agent-state')
-                    if agent_state == 'error':
-                        info = unit.get('agent-state-info')
-                        logging.error("{} failed: {}".format(uname, info))
-                        sys.exit(1)
+                    ready_units[uname] = unit  # Schedule for sniffing.
+                for subname, sub in unit.get('subordinates', {}).items():
+                    if 'agent-status' in sub:
+                        agent_status[subname] = sub['agent-status']
                     else:
-                        logging.debug('{} is {}'.format(uname, agent_state))
+                        ready_units[subname] = sub  # Schedule for sniffing.
 
-        if ready and ready_units:
-            # For Juju 1.23 or earlier agents, we need to fallback to
-            # old behavior. We use juju run to grab the log tail on all
-            # units. If the logs are identical twice in a row,
-            # we know that hooks have stopped running. This is fragile,
-            # as enabling extra Juju logging may break this.
-            for uname in ready_units:
+        for uname, astatus in agent_status.items():
+            current = astatus['current']
+            since = parse_ts(astatus['since'])
+            if current == 'idle' and since + IDLE_CONFIRMATION < now:
+                logging.debug('{} idle since {}Z (long enough)'.format(uname,
+                                                                       since))
+            else:
+                logging.debug('{} {} since {}Z'.format(uname, current, since))
+                ready = False
+
+        # Log storage to compare with prev_logs.
+        logs = {}
+
+        # Sniff logs of units that don't provide agent-status, if necessary.
+        for uname, unit in ready_units.items():
+            dying = unit.get('life') in ('dying', 'dead')
+            agent_state = unit.get('agent-state')
+            agent_state_info = unit.get('agent-state-info')
+            if dying:
+                logging.debug('{} is dying'.format(uname))
+                ready = False
+            elif agent_state == 'error':
+                logging.error('{} failed: {}'.format(uname, agent_state_info))
+                ready = False
+                sys.exit(1)
+            elif agent_state != 'started':
+                logging.debug('{} is {}'.format(uname, agent_state))
+                ready = False
+            elif ready:
                 logs[uname] = get_log_tail(uname)
                 if logs[uname] == prev_logs.get(uname):
                     logging.debug('{} is idle - no hook activity'
                                   ''.format(uname))
-                    idle_units.add(uname)
-                elif prev_logs.get(uname):
-                    logging.debug('{} is active. {}'.format(uname,
-                                                            logs[uname]))
-            prev_logs = logs
+                else:
+                    logging.debug('{} is active: {}'
+                                  ''.format(uname, logs[uname].strip()))
+                    ready = False
 
-        # If there is nothing but idle units, then we are good to go.
-        if ready and all_units == idle_units:
-            logging.info('All units idle ({})'.format(', '.join(idle_units)))
+        if ready:
+            logging.info('All units idle ({})'
+                         ''.format(', '.join(sorted(all_units))))
             return
 
-        time.sleep(2)
+        prev_logs = logs
+
+        time.sleep(4)
 
 
 if __name__ == '__main__':
