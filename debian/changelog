@@ -1,6 +1,8 @@
 juju-wait (2.1.1) precise; urgency=medium
 
   * Verbose output in stable, alphabetic order.
+  * Reset environment logging to default juju stable settings
+    with Juju 1.23 or earlier.
 
  -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Tue, 22 Sep 2015 16:10:37 +0700
 

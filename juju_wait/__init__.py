@@ -125,12 +125,22 @@ def wait_cmd(args=sys.argv[1:]):
     return wait(log)
 
 
+def reset_logging():
+    """If we are running Juju 1.23 or earlier, we require default logging.
+    
+    Reset the environment log settings to match default juju stable.
+    """
+    run_or_die(['juju', 'set-environment',
+                'logging-config=juju=WARNING;unit=INFO'])
+
 def wait(log):
     # pre-juju 1.24, we can only detect idleless by looking for changes
     # in the logs.
     prev_logs = {}
 
     start = datetime.now()
+
+    logging_reset = False
 
     while True:
         status = get_status()
@@ -163,12 +173,12 @@ def wait(log):
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
-                if 'agent-status' in unit:
+                if 'zagent-status' in unit:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
-                    if 'agent-status' in sub:
+                    if 'zagent-status' in sub:
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
@@ -202,6 +212,9 @@ def wait(log):
                 logging.debug('{} is {}'.format(uname, agent_state))
                 ready = False
             elif ready:
+                if not logging_reset:
+                    reset_logging()
+                    logging_reset = True
                 logs[uname] = get_log_tail(uname)
                 if logs[uname] == prev_logs.get(uname):
                     logging.debug('{} is idle - no hook activity'
