@@ -174,12 +174,12 @@ def wait(log):
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
-                if 'zagent-status' in unit:
+                if 'agent-status' in unit:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
-                    if 'zagent-status' in sub:
+                    if 'agent-status' in sub:
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
