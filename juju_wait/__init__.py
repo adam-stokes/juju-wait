@@ -43,6 +43,11 @@ def parse_ts(ts):
     return datetime.strptime(ts, '%d %b %Y %H:%M:%SZ')
 
 
+class JujuWaitException(Exception):
+    '''A fatal exception'''
+    pass
+
+
 def run_or_die(cmd, env=None):
     try:
         # It is important we don't mix stdout and stderr, as stderr
@@ -51,14 +56,17 @@ def run_or_die(cmd, env=None):
         p = subprocess.Popen(cmd, universal_newlines=True, env=env,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = p.communicate()
-        if p.returncode == 0:
-            return out
-        logging.error(err)
-        logging.error("{} failed: {}".format(cmd, p.returncode))
-        sys.exit(p.returncode or 43)
+    except OSError as x:
+        logging.error("{} failed: {}".format(' '.join(cmd), x.errno))
+        raise JujuWaitException(x.errno or 41)
     except Exception as x:
-        logging.error("{} failed: {}".format(x.cmd, x.returncode))
-        sys.exit(x.returncode or 42)
+        logging.error("{} failed: {}".format(' '.join(cmd), x))
+        raise JujuWaitException(42)
+    if p.returncode != 0:
+        logging.error(err)
+        logging.error("{} failed: {}".format(' '.join(cmd), p.returncode))
+        raise JujuWaitException(p.returncode or 43)
+    return out
 
 
 def juju_run(unit, cmd, timeout=None):
@@ -122,7 +130,11 @@ def wait_cmd(args=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
-    return wait(log)
+    try:
+        wait(log)
+        return 0
+    except JujuWaitException as x:
+        return x.args[0]
 
 
 def reset_logging():
@@ -208,7 +220,7 @@ def wait(log):
             elif agent_state == 'error':
                 logging.error('{} failed: {}'.format(uname, agent_state_info))
                 ready = False
-                sys.exit(1)
+                raise JujuWaitException(1)
             elif agent_state != 'started':
                 logging.debug('{} is {}'.format(uname, agent_state))
                 ready = False
@@ -241,6 +253,6 @@ if __name__ == '__main__':
     # launchers.
     script = os.path.basename(sys.argv[0])
     if script == 'juju-wait':
-        wait_cmd()
+        sys.exit(wait_cmd())
     else:
         raise RuntimeError('Unknown script {}'.format(script))
