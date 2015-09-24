@@ -157,7 +157,6 @@ def wait(log):
     # in the logs.
     prev_logs = {}
 
-    start = datetime.now()
     ready_since = None
 
     logging_reset = False
