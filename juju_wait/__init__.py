@@ -19,6 +19,7 @@
 
 import argparse
 from datetime import datetime, timedelta
+from distutils.version import LooseVersion
 import json
 import logging
 import os
@@ -91,6 +92,11 @@ def get_log_tail(unit, timeout=None):
     log = 'unit-{}.log'.format(unit.replace('/', '-'))
     cmd = 'sudo tail -1 /var/log/juju/{}'.format(log)
     return juju_run(unit, cmd, timeout=timeout)
+
+
+def get_is_leader(unit, timeout=None):
+    raw = juju_run(unit, 'is-leader --format=json', timeout=timeout)
+    return json.loads(raw)
 
 
 # Juju 1.24+ provides us with the timestamp the status last changed.
@@ -183,14 +189,17 @@ def wait(log):
         # Juju 1.24 and later. This is easily confused with 'agent state'
         # which is available in earlier versions of Juju.
         agent_status = {}
+        agent_version = {}
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
+                agent_version[uname] = unit.get('agent-version')
                 if 'agent-status' in unit:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
+                    agent_version[subname] = sub.get('agent-version')
                     if 'agent-status' in sub:
                         agent_status[subname] = sub['agent-status']
                     else:
@@ -235,6 +244,22 @@ def wait(log):
                 else:
                     logging.debug('{} is active: {}'
                                   ''.format(uname, logs[uname].strip()))
+                    ready = False
+
+        # Ensure every service has a leader. If there is no leader, then
+        # one will be appointed soon and hooks should kick off.
+        if ready:
+            services_with_leader = set()
+            for uname, version in agent_version.items():
+                sname = uname.split('/', 1)[0]
+                if (sname not in services_with_leader and version
+                    and (LooseVersion(version) >= LooseVersion('1.23')
+                         or get_is_leader(uname) is True)):
+                    services_with_leader.add(sname)
+                    logging.debug('{} is lead by {}'.format(sname, uname))
+            for sname in status.get('services', {}).keys():
+                if sname not in services_with_leader:
+                    logging.info('{} does not have a leader'.format(sname))
                     ready = False
 
         if ready:
