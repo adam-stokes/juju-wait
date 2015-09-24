@@ -104,7 +104,7 @@ def get_is_leader(unit, timeout=None):
 # quiescent. This may be unnecessary, but protects against races
 # where all units report they are currently idle but there are hooks
 # still due to be run.
-IDLE_CONFIRMATION = timedelta(seconds=10)
+IDLE_CONFIRMATION = timedelta(seconds=15)
 
 
 def wait_cmd(args=sys.argv[1:]):
@@ -158,19 +158,13 @@ def wait(log):
     prev_logs = {}
 
     start = datetime.now()
+    ready_since = None
 
     logging_reset = False
 
     while True:
         status = get_status()
-        now = datetime.utcnow()
-
-        # We are never ready until this check has been running until
-        # IDLE_CONFIRMATION time has passed. This ensures that if we
-        # run 'juju wait' immediately after an operation such as
-        # 'juju upgrade-charm', then the scheduled operation has had
-        # a chance to fire any hooks it is going to.
-        ready = (datetime.now() > start + IDLE_CONFIRMATION)
+        ready = True
 
         # If there is a dying service, environment is not quiescent.
         for sname, service in sorted(status.get('services', {}).items()):
@@ -208,11 +202,8 @@ def wait(log):
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
-            if current == 'idle' and since + IDLE_CONFIRMATION < now:
-                logging.debug('{} idle since {}Z (long enough)'.format(uname,
-                                                                       since))
-            else:
-                logging.debug('{} {} since {}Z'.format(uname, current, since))
+            logging.debug('{} is {} since {}Z'.format(uname, current, since))
+            if current != 'idle':
                 ready = False
 
         # Log storage to compare with prev_logs.
@@ -263,12 +254,22 @@ def wait(log):
                     ready = False
 
         if ready:
-            logging.info('All units idle ({})'
-                         ''.format(', '.join(sorted(all_units))))
-            return
+            # We are never ready until this check has been running until
+            # IDLE_CONFIRMATION time has passed. This ensures that if we
+            # run 'juju wait' immediately after an operation such as
+            # 'juju upgrade-charm', then the scheduled operation has had
+            # a chance to fire any hooks it is going to.
+            if ready_since is None:
+                ready_since = datetime.now()
+            elif ready_since + IDLE_CONFIRMATION < datetime.now():
+                logging.info('All units idle since {} ({})'
+                             ''.format(ready_since,
+                                       ', '.join(sorted(all_units))))
+                return
+        else:
+            ready_since = None
 
         prev_logs = logs
-
         time.sleep(4)
 
 
