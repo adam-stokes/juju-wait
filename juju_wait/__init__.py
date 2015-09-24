@@ -260,9 +260,9 @@ def wait(log):
             # 'juju upgrade-charm', then the scheduled operation has had
             # a chance to fire any hooks it is going to.
             if ready_since is None:
-                ready_since = datetime.now()
-            elif ready_since + IDLE_CONFIRMATION < datetime.now():
-                logging.info('All units idle since {} ({})'
+                ready_since = datetime.utcnow()
+            elif ready_since + IDLE_CONFIRMATION < datetime.utcnow():
+                logging.info('All units idle since {}Z ({})'
                              ''.format(ready_since,
                                        ', '.join(sorted(all_units))))
                 return
