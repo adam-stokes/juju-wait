@@ -1,3 +1,9 @@
+juju-wait (2.2.1) precise; urgency=medium
+
+  * Don't block forever when a service with no units has no leader.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Fri, 25 Sep 2015 12:36:29 +0700
+
 juju-wait (2.2.0) precise; urgency=medium
 
   * Perform leadership checks with Juju 1.23 or later. The environment can

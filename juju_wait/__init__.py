@@ -239,15 +239,17 @@ def wait(log):
         # Ensure every service has a leader. If there is no leader, then
         # one will be appointed soon and hooks should kick off.
         if ready:
+            services = set()
             services_with_leader = set()
             for uname, version in agent_version.items():
                 sname = uname.split('/', 1)[0]
+                services.add(sname)
                 if (sname not in services_with_leader and version
                     and (LooseVersion(version) >= LooseVersion('1.23')
                          or get_is_leader(uname) is True)):
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
-            for sname in status.get('services', {}).keys():
+            for sname in services:
                 if sname not in services_with_leader:
                     logging.info('{} does not have a leader'.format(sname))
                     ready = False
