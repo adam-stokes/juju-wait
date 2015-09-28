@@ -152,7 +152,10 @@ def reset_logging():
                 'logging-config=juju=WARNING;unit=INFO'])
 
 
-def wait(log):
+def wait(log=None):
+    if log is None:
+        log = logging.getLogger()
+
     # pre-juju 1.24, we can only detect idleless by looking for changes
     # in the logs.
     prev_logs = {}
