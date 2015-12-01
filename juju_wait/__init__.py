@@ -190,13 +190,13 @@ def wait(log=None):
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
                 agent_version[uname] = unit.get('agent-version')
-                if 'agent-status' in unit:
+                if 'agent-status' in unit and unit['agent-status'] != {}:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
                     agent_version[subname] = sub.get('agent-version')
-                    if 'agent-status' in sub:
+                    if 'agent-status' in sub and unit['agent-status'] != {}:
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
@@ -226,7 +226,7 @@ def wait(log=None):
             elif agent_state != 'started':
                 logging.debug('{} is {}'.format(uname, agent_state))
                 ready = False
-            elif ready:
+            else:
                 if not logging_reset:
                     reset_logging()
                     logging_reset = True
@@ -248,7 +248,7 @@ def wait(log=None):
                 sname = uname.split('/', 1)[0]
                 services.add(sname)
                 if (sname not in services_with_leader and version
-                    and (LooseVersion(version) >= LooseVersion('1.23')
+                    and (LooseVersion(version) <= LooseVersion('1.23')
                          or get_is_leader(uname) is True)):
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
