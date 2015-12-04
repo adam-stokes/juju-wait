@@ -226,7 +226,12 @@ def wait(log=None):
             elif agent_state != 'started':
                 logging.debug('{} is {}'.format(uname, agent_state))
                 ready = False
-            else:
+            elif ready:
+                # We only start grabbing the logs once all the units
+                # are in a suitable lifecycle state. If we don't do this,
+                # we risk attempting to grab logs from units or subordinates
+                # that are not yet ready to respond, or have disappeared
+                # since we last checked the environment status.
                 if not logging_reset:
                     reset_logging()
                     logging_reset = True
