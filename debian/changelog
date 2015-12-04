@@ -1,3 +1,10 @@
+juju-wait (2.2.3) precise; urgency=medium
+
+  * Never attempt to retrieve logs until all units are in a sane lifecycle
+    state.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Fri, 04 Dec 2015 11:17:45 +0700
+
 juju-wait (2.2.2) precise; urgency=medium
 
   * [Greg Lutostanski] Fixes for case when juju client >= 1.24 and juju agent < 1.24
