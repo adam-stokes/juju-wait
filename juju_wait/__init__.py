@@ -106,6 +106,13 @@ def get_is_leader(unit, timeout=None):
 # still due to be run.
 IDLE_CONFIRMATION = timedelta(seconds=15)
 
+# If all units have one of the following workload status values,
+# consider them ready.  Not all charms use workload the status feature.
+# Those that do not will be represented by the 'unknown' value and
+# workload status will be ignored.  For charms that do, wait for an
+# 'active' workload status value.  FYI, 'blocked' and 'waiting'
+# indicate a not-ready workload state.
+WORKLOAD_OK_STATES = ['active', 'unknown']
 
 def wait_cmd(args=sys.argv[1:]):
     description = dedent("""\
@@ -180,32 +187,46 @@ def wait(log=None):
         # logs sniffed because they are running Juju 1.23 or earlier.
         ready_units = {}
 
-        # Flattened agent status for all units and subordinates that
-        # provide it. Note that 'agent status' is only available in
+        # Flattened agent and workload status for all units and subordinates
+        # that provide it. Note that 'agent status' is only available in
         # Juju 1.24 and later. This is easily confused with 'agent state'
         # which is available in earlier versions of Juju.
+        workload_status = {}
         agent_status = {}
         agent_version = {}
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
                 agent_version[uname] = unit.get('agent-version')
+                if 'workload-status' in unit and 'current' in unit['workload-status']:
+                    workload_status[uname] = unit['workload-status']
+
                 if 'agent-status' in unit and unit['agent-status'] != {}:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
+                    if 'workload-status' in sub and 'current' in sub['workload-status']:
+                        workload_status[subname] = sub['workload-status']
+
                     agent_version[subname] = sub.get('agent-version')
                     if 'agent-status' in sub and unit['agent-status'] != {}:
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
 
+        for uname, wstatus in sorted(workload_status.items()):
+            current = wstatus['current']
+            since = parse_ts(wstatus['since'])
+            if current not in WORKLOAD_OK_STATES:
+                logging.debug('{} workload status is {} since {}Z'.format(uname, current, since))
+                ready = False
+
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
-            logging.debug('{} is {} since {}Z'.format(uname, current, since))
             if current != 'idle':
+                logging.debug('{} agent status is {} since {}Z'.format(uname, current, since))
                 ready = False
 
         # Log storage to compare with prev_logs.
