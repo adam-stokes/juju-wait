@@ -133,6 +133,9 @@ def wait_cmd(args=sys.argv[1:]):
                         action='store_true', default=False)
     parser.add_argument('-v', '--verbose', dest='verbose',
                         action='store_true', default=False)
+    parser.add_argument('-w', '--workload', dest='wait_for_workload',
+                        help='Wait for unit workload status active state',
+                        action='store_true', default=False)
     args = parser.parse_args(args)
 
     # Parser did not exit, so continue.
@@ -145,7 +148,7 @@ def wait_cmd(args=sys.argv[1:]):
     else:
         log.setLevel(logging.INFO)
     try:
-        wait(log)
+        wait(log, args.wait_for_workload)
         return 0
     except JujuWaitException as x:
         return x.args[0]
@@ -160,7 +163,7 @@ def reset_logging():
                 'logging-config=juju=WARNING;unit=INFO'])
 
 
-def wait(log=None):
+def wait(log=None, wait_for_workload=False):
     if log is None:
         log = logging.getLogger()
 
@@ -221,7 +224,7 @@ def wait(log=None):
         for uname, wstatus in sorted(workload_status.items()):
             current = wstatus['current']
             since = parse_ts(wstatus['since'])
-            if current not in WORKLOAD_OK_STATES:
+            if current not in WORKLOAD_OK_STATES and wait_for_workload:
                 logging.debug('{} workload status is {} since '
                               '{}Z'.format(uname, current, since))
                 ready = False
