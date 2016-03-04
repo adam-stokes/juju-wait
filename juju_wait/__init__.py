@@ -114,6 +114,7 @@ IDLE_CONFIRMATION = timedelta(seconds=15)
 # indicate a not-ready workload state.
 WORKLOAD_OK_STATES = ['active', 'unknown']
 
+
 def wait_cmd(args=sys.argv[1:]):
     description = dedent("""\
         Wait for environment steady state.
@@ -198,7 +199,8 @@ def wait(log=None):
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
                 agent_version[uname] = unit.get('agent-version')
-                if 'workload-status' in unit and 'current' in unit['workload-status']:
+                if ('workload-status' in unit and
+                        'current' in unit['workload-status']):
                     workload_status[uname] = unit['workload-status']
 
                 if 'agent-status' in unit and unit['agent-status'] != {}:
@@ -206,7 +208,8 @@ def wait(log=None):
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
-                    if 'workload-status' in sub and 'current' in sub['workload-status']:
+                    if ('workload-status' in sub and
+                            'current' in sub['workload-status']):
                         workload_status[subname] = sub['workload-status']
 
                     agent_version[subname] = sub.get('agent-version')
@@ -219,14 +222,16 @@ def wait(log=None):
             current = wstatus['current']
             since = parse_ts(wstatus['since'])
             if current not in WORKLOAD_OK_STATES:
-                logging.debug('{} workload status is {} since {}Z'.format(uname, current, since))
+                logging.debug('{} workload status is {} since '
+                              '{}Z'.format(uname, current, since))
                 ready = False
 
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
             if current != 'idle':
-                logging.debug('{} agent status is {} since {}Z'.format(uname, current, since))
+                logging.debug('{} agent status is {} since '
+                              '{}Z'.format(uname, current, since))
                 ready = False
 
         # Log storage to compare with prev_logs.
@@ -273,9 +278,9 @@ def wait(log=None):
             for uname, version in agent_version.items():
                 sname = uname.split('/', 1)[0]
                 services.add(sname)
-                if (sname not in services_with_leader and version
-                    and (LooseVersion(version) <= LooseVersion('1.23')
-                         or get_is_leader(uname) is True)):
+                if (sname not in services_with_leader and version and
+                    (LooseVersion(version) <= LooseVersion('1.23') or
+                        get_is_leader(uname) is True)):
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
             for sname in services:
