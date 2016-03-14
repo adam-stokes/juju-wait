@@ -110,8 +110,8 @@ IDLE_CONFIRMATION = timedelta(seconds=15)
 # consider them ready.  Not all charms use workload the status feature.
 # Those that do not will be represented by the 'unknown' value and
 # workload status will be ignored.  For charms that do, wait for an
-# 'active' workload status value.  FYI, 'blocked' and 'waiting'
-# indicate a not-ready workload state.
+# 'active' workload status value.  FYI: blocked, waiting, maintenance
+# values indicate not-ready workload states.
 WORKLOAD_OK_STATES = ['active', 'unknown']
 
 
@@ -136,6 +136,9 @@ def wait_cmd(args=sys.argv[1:]):
     parser.add_argument('-w', '--workload', dest='wait_for_workload',
                         help='Wait for unit workload status active state',
                         action='store_true', default=False)
+    parser.add_argument('-t', '--max_wait', dest='max_wait',
+                        help='Maximum time to wait for readiness (seconds)',
+                        action='store', default=None)
     args = parser.parse_args(args)
 
     # Parser did not exit, so continue.
@@ -147,8 +150,14 @@ def wait_cmd(args=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
+
+    if args.max_wait:
+        max_wait = int(args.max_wait)
+    else:
+        max_wait = args.max_wait
+
     try:
-        wait(log, args.wait_for_workload)
+        wait(log, args.wait_for_workload, max_wait)
         return 0
     except JujuWaitException as x:
         return x.args[0]
@@ -163,7 +172,7 @@ def reset_logging():
                 'logging-config=juju=WARNING;unit=INFO'])
 
 
-def wait(log=None, wait_for_workload=False):
+def wait(log=None, wait_for_workload=False, max_wait=None):
     if log is None:
         log = logging.getLogger()
 
@@ -171,13 +180,20 @@ def wait(log=None, wait_for_workload=False):
     # in the logs.
     prev_logs = {}
 
+    epoch_started = time.time()
     ready_since = None
-
     logging_reset = False
 
     while True:
         status = get_status()
         ready = True
+
+        # If defined, fail if max_wait is exceeded
+        epoch_elapsed = time.time() - epoch_started
+        if max_wait and epoch_elapsed > max_wait:
+            ready = False
+            logging.error('Not ready in {}s (max_wait)'.format(max_wait))
+            raise JujuWaitException(44)
 
         # If there is a dying service, environment is not quiescent.
         for sname, service in sorted(status.get('services', {}).items()):
