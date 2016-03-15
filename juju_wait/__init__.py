@@ -114,6 +114,9 @@ IDLE_CONFIRMATION = timedelta(seconds=15)
 # values indicate not-ready workload states.
 WORKLOAD_OK_STATES = ['active', 'unknown']
 
+# If any unit ever reaches one of the following workload status 
+# values, consider that fatal and raise.
+WORKLOAD_ERROR_STATES = ['error']
 
 def wait_cmd(args=sys.argv[1:]):
     description = dedent("""\
@@ -244,14 +247,25 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         for uname, wstatus in sorted(workload_status.items()):
             current = wstatus['current']
             since = parse_ts(wstatus['since'])
+
+            # Check workload status
             if current not in WORKLOAD_OK_STATES and wait_for_workload:
                 logging.debug('{} workload status is {} since '
                               '{}Z'.format(uname, current, since))
                 ready = False
 
+            # Fail and raise if workload state is ever in error
+            if current in WORKLOAD_ERROR_STATES and wait_for_workload:
+                logging.error('{} failed: workload status is '
+                              '{}'.format(uname, current))
+                ready = False
+                raise JujuWaitException(1)
+
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
+
+            # Check agent status
             if current != 'idle':
                 logging.debug('{} agent status is {} since '
                               '{}Z'.format(uname, current, since))
