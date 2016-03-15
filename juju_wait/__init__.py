@@ -114,9 +114,10 @@ IDLE_CONFIRMATION = timedelta(seconds=15)
 # values indicate not-ready workload states.
 WORKLOAD_OK_STATES = ['active', 'unknown']
 
-# If any unit ever reaches one of the following workload status 
+# If any unit ever reaches one of the following workload status
 # values, consider that fatal and raise.
 WORKLOAD_ERROR_STATES = ['error']
+
 
 def wait_cmd(args=sys.argv[1:]):
     description = dedent("""\
