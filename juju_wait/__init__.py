@@ -106,6 +106,18 @@ def get_is_leader(unit, timeout=None):
 # still due to be run.
 IDLE_CONFIRMATION = timedelta(seconds=15)
 
+# If all units have one of the following workload status values,
+# consider them ready.  Not all charms use workload the status feature.
+# Those that do not will be represented by the 'unknown' value and
+# workload status will be ignored.  For charms that do, wait for an
+# 'active' workload status value.  FYI: blocked, waiting, maintenance
+# values indicate not-ready workload states.
+WORKLOAD_OK_STATES = ['active', 'unknown']
+
+# If any unit ever reaches one of the following workload status
+# values, consider that fatal and raise.
+WORKLOAD_ERROR_STATES = ['error']
+
 
 def wait_cmd(args=sys.argv[1:]):
     description = dedent("""\
@@ -125,6 +137,12 @@ def wait_cmd(args=sys.argv[1:]):
                         action='store_true', default=False)
     parser.add_argument('-v', '--verbose', dest='verbose',
                         action='store_true', default=False)
+    parser.add_argument('-w', '--workload', dest='wait_for_workload',
+                        help='Wait for unit workload status active state',
+                        action='store_true', default=False)
+    parser.add_argument('-t', '--max_wait', dest='max_wait',
+                        help='Maximum time to wait for readiness (seconds)',
+                        action='store', default=None)
     args = parser.parse_args(args)
 
     # Parser did not exit, so continue.
@@ -136,8 +154,18 @@ def wait_cmd(args=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
+
+    # Set max_wait integer value if specified, otherwise None.
+    # This preserves the existing behavior while allowing the
+    # user to optionally specify a maximum wait time.
+    if args.max_wait:
+        max_wait = int(args.max_wait)
+    else:
+        max_wait = None
+
+    # Begin watching and waiting
     try:
-        wait(log)
+        wait(log, args.wait_for_workload, max_wait)
         return 0
     except JujuWaitException as x:
         return x.args[0]
@@ -152,7 +180,7 @@ def reset_logging():
                 'logging-config=juju=WARNING;unit=INFO'])
 
 
-def wait(log=None):
+def wait(log=None, wait_for_workload=False, max_wait=None):
     if log is None:
         log = logging.getLogger()
 
@@ -160,13 +188,20 @@ def wait(log=None):
     # in the logs.
     prev_logs = {}
 
+    epoch_started = time.time()
     ready_since = None
-
     logging_reset = False
 
     while True:
         status = get_status()
         ready = True
+
+        # If defined, fail if max_wait is exceeded
+        epoch_elapsed = time.time() - epoch_started
+        if max_wait and epoch_elapsed > max_wait:
+            ready = False
+            logging.error('Not ready in {}s (max_wait)'.format(max_wait))
+            raise JujuWaitException(44)
 
         # If there is a dying service, environment is not quiescent.
         for sname, service in sorted(status.get('services', {}).items()):
@@ -180,32 +215,61 @@ def wait(log=None):
         # logs sniffed because they are running Juju 1.23 or earlier.
         ready_units = {}
 
-        # Flattened agent status for all units and subordinates that
-        # provide it. Note that 'agent status' is only available in
+        # Flattened agent and workload status for all units and subordinates
+        # that provide it. Note that 'agent status' is only available in
         # Juju 1.24 and later. This is easily confused with 'agent state'
         # which is available in earlier versions of Juju.
+        workload_status = {}
         agent_status = {}
         agent_version = {}
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
                 agent_version[uname] = unit.get('agent-version')
+                if ('workload-status' in unit and
+                        'current' in unit['workload-status']):
+                    workload_status[uname] = unit['workload-status']
+
                 if 'agent-status' in unit and unit['agent-status'] != {}:
                     agent_status[uname] = unit['agent-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
+                    if ('workload-status' in sub and
+                            'current' in sub['workload-status']):
+                        workload_status[subname] = sub['workload-status']
+
                     agent_version[subname] = sub.get('agent-version')
                     if 'agent-status' in sub and unit['agent-status'] != {}:
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
 
+        for uname, wstatus in sorted(workload_status.items()):
+            current = wstatus['current']
+            since = parse_ts(wstatus['since'])
+
+            # Check workload status
+            if current not in WORKLOAD_OK_STATES and wait_for_workload:
+                logging.debug('{} workload status is {} since '
+                              '{}Z'.format(uname, current, since))
+                ready = False
+
+            # Fail and raise if workload state is ever in error
+            if current in WORKLOAD_ERROR_STATES and wait_for_workload:
+                logging.error('{} failed: workload status is '
+                              '{}'.format(uname, current))
+                ready = False
+                raise JujuWaitException(1)
+
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
-            logging.debug('{} is {} since {}Z'.format(uname, current, since))
+
+            # Check agent status
             if current != 'idle':
+                logging.debug('{} agent status is {} since '
+                              '{}Z'.format(uname, current, since))
                 ready = False
 
         # Log storage to compare with prev_logs.
@@ -252,9 +316,9 @@ def wait(log=None):
             for uname, version in agent_version.items():
                 sname = uname.split('/', 1)[0]
                 services.add(sname)
-                if (sname not in services_with_leader and version
-                    and (LooseVersion(version) <= LooseVersion('1.23')
-                         or get_is_leader(uname) is True)):
+                if (sname not in services_with_leader and version and
+                    (LooseVersion(version) <= LooseVersion('1.23') or
+                        get_is_leader(uname) is True)):
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
             for sname in services:
