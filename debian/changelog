@@ -1,3 +1,10 @@
+juju-wait (2.2.3ubuntu1) precise; urgency=medium
+
+  * Add a timeout option
+  * Add an option to wait until an active workload status is reported.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Mon, 04 Apr 2016 15:56:34 +0700
+
 juju-wait (2.2.3) precise; urgency=medium
 
   * Never attempt to retrieve logs until all units are in a sane lifecycle
