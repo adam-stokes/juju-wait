@@ -1,3 +1,10 @@
+juju-wait (2.3.1) precise; urgency=medium
+
+  * Support multiple juju executables, for juju 2.0 (cf. lp:1567296)
+  * psutil Python library is now a dependency. 
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Mon, 18 Apr 2016 17:24:03 +0700
+
 juju-wait (2.3.0) precise; urgency=medium
 
   * Add a timeout option

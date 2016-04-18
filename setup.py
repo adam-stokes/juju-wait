@@ -26,7 +26,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='juju-wait',
-    version='2.3.0',
+    version='2.3.1',
     packages=find_packages(),
     author='Stuart Bishop',
     author_email='stuart.bishop@canonical.com',
@@ -45,4 +45,5 @@ setup(
                  'Topic :: Utilities',
                  'Programming Language :: Python :: 3'],
     keywords='juju',
+    install_requires=['psutil'],
     entry_points={'console_scripts': ['juju-wait = juju_wait:wait_cmd']})

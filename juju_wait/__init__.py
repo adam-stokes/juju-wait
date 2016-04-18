@@ -28,6 +28,8 @@ import sys
 from textwrap import dedent
 import time
 
+import psutil
+
 
 class DescriptionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -70,10 +72,18 @@ def run_or_die(cmd, env=None):
     return out
 
 
+def juju_exe():
+    # Work around Bug #1567296
+    parent = psutil.Process(os.getppid())
+    if 'wait' in parent.cmdline():
+        return parent.exe()
+    return 'juju'  # Fallback, for 'juju-wait' non-plugin invocation.
+
+
 def juju_run(unit, cmd, timeout=None):
     if timeout is None:
         timeout = 6 * 60 * 60
-    return run_or_die(['juju', 'run', '--timeout={}s'.format(timeout),
+    return run_or_die([juju_exe(), 'run', '--timeout={}s'.format(timeout),
                        '--unit', unit, cmd])
 
 
@@ -82,7 +92,7 @@ def get_status():
     # using the environment variable.
     env = os.environ.copy()
     env['TZ'] = 'UTC'
-    json_status = run_or_die(['juju', 'status', '--format=json'], env=env)
+    json_status = run_or_die([juju_exe(), 'status', '--format=json'], env=env)
     if json_status is None:
         return None
     return json.loads(json_status)
@@ -176,7 +186,7 @@ def reset_logging():
 
     Reset the environment log settings to match default juju stable.
     """
-    run_or_die(['juju', 'set-environment',
+    run_or_die([juju_exe(), 'set-environment',
                 'logging-config=juju=WARNING;unit=INFO'])
 
 
