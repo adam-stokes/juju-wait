@@ -235,13 +235,23 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         for sname, service in status.get('services', {}).items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
-                agent_version[uname] = unit.get('agent-version')
+                if 'agent-version' in unit:
+                    agent_version[uname] = unit.get('agent-version')
+                elif 'juju-status' in unit:
+                    # agent-version disappeared and was replaced by
+                    # a subkey of juju-status some time during the Juju
+                    # 2.0 beta cycle.
+                    agent_version[uname] = unit['juju-status']['version']
                 if ('workload-status' in unit and
                         'current' in unit['workload-status']):
                     workload_status[uname] = unit['workload-status']
 
                 if 'agent-status' in unit and unit['agent-status'] != {}:
                     agent_status[uname] = unit['agent-status']
+                elif 'juju-status' in unit and unit['juju-status'] != {}:
+                    # agent-status was renamed to juju-status some time
+                    # during the Juju 2.0 beta cycle.
+                    agent_status[uname] = unit['juju-status']
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
@@ -251,6 +261,10 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
 
                     agent_version[subname] = sub.get('agent-version')
                     if 'agent-status' in sub and unit['agent-status'] != {}:
+                        agent_status[subname] = sub['agent-status']
+                    elif 'juju-status' in sub and unit['juju-status'] != {}:
+                        # agent-status was renamed to juju-status some time
+                        # during the Juju 2.0 beta cycle.
                         agent_status[subname] = sub['agent-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
@@ -278,7 +292,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
 
             # Check agent status
             if current != 'idle':
-                logging.debug('{} agent status is {} since '
+                logging.debug('{} juju agent status is {} since '
                               '{}Z'.format(uname, current, since))
                 ready = False
 
@@ -286,6 +300,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         logs = {}
 
         # Sniff logs of units that don't provide agent-status, if necessary.
+        # This section can go when we drop support for Juju < 1.24.
         for uname, unit in sorted(ready_units.items()):
             dying = unit.get('life') in ('dying', 'dead')
             agent_state = unit.get('agent-state')
