@@ -1,3 +1,9 @@
+juju-wait (2.3.2) precise; urgency=medium
+
+  * Handle backwards incompatible changes in Juju 2.0 beta status output.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Wed, 18 May 2016 18:36:50 +0700
+
 juju-wait (2.3.1) precise; urgency=medium
 
   * Support multiple juju executables, for juju 2.0 (cf. lp:1567296)
