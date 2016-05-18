@@ -237,7 +237,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                 all_units.add(uname)
                 if 'agent-version' in unit:
                     agent_version[uname] = unit.get('agent-version')
-                elif 'juju-status' in unit:
+                elif 'juju-status' in unit and 'version' in unit['juju-status']:
                     # agent-version disappeared and was replaced by
                     # a subkey of juju-status some time during the Juju
                     # 2.0 beta cycle.
