@@ -1,3 +1,9 @@
+juju-wait (2.3.4) precise; urgency=medium
+
+  * Correctly extract agent status from Juju 2.0 subordinates.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Fri, 20 May 2016 11:58:15 +0700
+
 juju-wait (2.3.3) precise; urgency=medium
 
   * Handle missing agent version early in unit lifecycle.

@@ -26,7 +26,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='juju-wait',
-    version='2.3.3',
+    version='2.3.4',
     packages=find_packages(),
     author='Stuart Bishop',
     author_email='stuart.bishop@canonical.com',

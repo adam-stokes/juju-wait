@@ -259,13 +259,17 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                             'current' in sub['workload-status']):
                         workload_status[subname] = sub['workload-status']
 
-                    agent_version[subname] = sub.get('agent-version')
+                    if 'agent-version' in sub:
+                        agent_version[subname] = sub['agent-version']
+                    elif 'juju-status' in sub and (
+                        'version' in sub['juju-status']):
+                        agent_version[subname] = sub['juju-status']['version']
                     if 'agent-status' in sub and unit['agent-status'] != {}:
                         agent_status[subname] = sub['agent-status']
                     elif 'juju-status' in sub and unit['juju-status'] != {}:
                         # agent-status was renamed to juju-status some time
                         # during the Juju 2.0 beta cycle.
-                        agent_status[subname] = sub['agent-status']
+                        agent_status[subname] = sub['juju-status']
                     else:
                         ready_units[subname] = sub  # Schedule for sniffing.
 
