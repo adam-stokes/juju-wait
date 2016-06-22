@@ -16,8 +16,7 @@ Architecture: all
 Depends:
  ${python3:Depends},
  ${misc:Depends},
- juju-core (>= 1.18.0),
- python3-psutil
+ juju-core (>= 1.18.0)
 Description: Juju plugin to wait for environment steady state.
  This plugin provides the following new juju command:
  .

@@ -47,5 +47,5 @@ setup(
                  'Topic :: Utilities',
                  'Programming Language :: Python :: 3'],
     keywords='juju',
-    install_requires=['psutil'],
+    install_requires=[],
     entry_points={'console_scripts': ['juju-wait = juju_wait:wait_cmd']})

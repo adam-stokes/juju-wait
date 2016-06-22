@@ -1,3 +1,9 @@
+juju-wait (2.3.6) precise; urgency=medium
+
+  * Remove now unnecessary psutil dependency
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Thu, 23 Jun 2016 00:35:59 +0700
+
 juju-wait (2.3.5) precise; urgency=medium
 
   * Support Juju 2.0 beta 9.

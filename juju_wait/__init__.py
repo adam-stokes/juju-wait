@@ -28,10 +28,8 @@ import sys
 from textwrap import dedent
 import time
 
-import psutil
 
-
-__version__ = '2.3.5'
+__version__ = '2.3.6'
 
 
 class DescriptionAction(argparse.Action):
@@ -76,11 +74,7 @@ def run_or_die(cmd, env=None):
 
 
 def juju_exe():
-    # Work around Bug #1567296
-    parent = psutil.Process(os.getppid())
-    if 'wait' in parent.cmdline():
-        return parent.exe()
-    return 'juju'  # Fallback, for 'juju-wait' non-plugin invocation.
+    return 'juju'
 
 
 def juju_run(unit, cmd, timeout=None):
