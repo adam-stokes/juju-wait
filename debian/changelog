@@ -1,3 +1,10 @@
+juju-wait (2.3.5) precise; urgency=medium
+
+  * Support Juju 2.0 beta 9.
+  * Add --version argument
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Thu, 23 Jun 2016 00:17:10 +0700
+
 juju-wait (2.3.4) precise; urgency=medium
 
   * Correctly extract agent status from Juju 2.0 subordinates.

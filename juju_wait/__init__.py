@@ -31,6 +31,9 @@ import time
 import psutil
 
 
+__version__ = '2.3.5'
+
+
 class DescriptionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         parser.exit(0, parser.description.splitlines()[0] + '\n')
@@ -153,7 +156,11 @@ def wait_cmd(args=sys.argv[1:]):
     parser.add_argument('-t', '--max_wait', dest='max_wait',
                         help='Maximum time to wait for readiness (seconds)',
                         action='store', default=None)
+    parser.add_argument('--version', default=False, action='store_true')
     args = parser.parse_args(args)
+
+    if args.version:
+        parser.exit(0, __version__ + '\n')
 
     # Parser did not exit, so continue.
     logging.basicConfig()
@@ -214,7 +221,8 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
             raise JujuWaitException(44)
 
         # If there is a dying service, environment is not quiescent.
-        for sname, service in sorted(status.get('services', {}).items()):
+        services = status.get('services') or status.get('applications', {})
+        for sname, service in sorted(services.items()):
             if service.get('life') in ('dying', 'dead'):
                 logging.debug('{} is dying'.format(sname))
                 ready = False
@@ -232,7 +240,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         workload_status = {}
         agent_status = {}
         agent_version = {}
-        for sname, service in status.get('services', {}).items():
+        for sname, service in services.items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
                 if 'agent-version' in unit:

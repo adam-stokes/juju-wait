@@ -19,6 +19,8 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
+import juju_wait
+
 here = path.abspath(path.dirname(__file__))
 
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -26,7 +28,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='juju-wait',
-    version='2.3.4',
+    version=juju_wait.__version__,
     packages=find_packages(),
     author='Stuart Bishop',
     author_email='stuart.bishop@canonical.com',
