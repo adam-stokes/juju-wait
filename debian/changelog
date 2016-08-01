@@ -1,3 +1,9 @@
+juju-wait (2.3.7) precise; urgency=medium
+
+  * Update package dependencies for Juju 2.0 beta packaging changes.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Mon, 01 Aug 2016 19:48:01 +0700
+
 juju-wait (2.3.6) precise; urgency=medium
 
   * Remove now unnecessary psutil dependency
