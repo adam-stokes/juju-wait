@@ -1,3 +1,9 @@
+juju-wait (2.3.8) precise; urgency=medium
+
+  * Ignore update-status hook, check leaders after IDLE_CONFIRMATION loop.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Mon, 12 Sep 2016 16:14:04 -0700
+
 juju-wait (2.3.7) precise; urgency=medium
 
   * Update package dependencies for Juju 2.0 beta packaging changes.
