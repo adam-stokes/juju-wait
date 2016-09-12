@@ -295,9 +295,17 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         for uname, astatus in sorted(agent_status.items()):
             current = astatus['current']
             since = parse_ts(astatus['since'])
+            if 'message' in astatus:
+                message = astatus['message']
+            else:
+                message = ''
 
             # Check agent status
-            if current != 'idle':
+            if (current == 'executing'
+                and message == 'running update-status hook'):
+                # update-status is an idle hook event
+                pass
+            elif current != 'idle':
                 logging.debug('{} juju agent status is {} since '
                               '{}Z'.format(uname, current, since))
                 ready = False
@@ -339,8 +347,29 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                                   ''.format(uname, logs[uname].strip()))
                     ready = False
 
+        if ready:
+            # We are never ready until this check has been running until
+            # IDLE_CONFIRMATION time has passed. This ensures that if we
+            # run 'juju wait' immediately after an operation such as
+            # 'juju upgrade-charm', then the scheduled operation has had
+            # a chance to fire any hooks it is going to.
+            if ready_since is None:
+                ready_since = datetime.utcnow()
+                ready = False
+            elif ready_since + IDLE_CONFIRMATION < datetime.utcnow():
+                logging.info('All units idle since {}Z ({})'
+                             ''.format(ready_since,
+                                       ', '.join(sorted(all_units))))
+            else:
+                ready = False
+        else:
+            ready_since = None
+            ready = False
+
         # Ensure every service has a leader. If there is no leader, then
         # one will be appointed soon and hooks should kick off.
+        # Run last as it can take quite awhile on environments with a
+        # large number of services.
         if ready:
             services = set()
             services_with_leader = set()
@@ -355,23 +384,12 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
             for sname in services:
                 if sname not in services_with_leader:
                     logging.info('{} does not have a leader'.format(sname))
+                    ready_since = None
                     ready = False
 
+        # If everything looks good, return.
         if ready:
-            # We are never ready until this check has been running until
-            # IDLE_CONFIRMATION time has passed. This ensures that if we
-            # run 'juju wait' immediately after an operation such as
-            # 'juju upgrade-charm', then the scheduled operation has had
-            # a chance to fire any hooks it is going to.
-            if ready_since is None:
-                ready_since = datetime.utcnow()
-            elif ready_since + IDLE_CONFIRMATION < datetime.utcnow():
-                logging.info('All units idle since {}Z ({})'
-                             ''.format(ready_since,
-                                       ', '.join(sorted(all_units))))
-                return
-        else:
-            ready_since = None
+            return
 
         prev_logs = logs
         time.sleep(4)
