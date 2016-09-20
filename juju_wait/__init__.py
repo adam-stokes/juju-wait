@@ -40,6 +40,8 @@ class DescriptionAction(argparse.Action):
 class EnvironmentAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         os.environ['JUJU_ENV'] = values[0]
+        # also set JUJU_MODEL environment variable for juju 2.x
+        os.environ['JUJU_MODEL'] = values[0]
 
 
 def parse_ts(ts):
