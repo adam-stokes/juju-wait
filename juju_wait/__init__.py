@@ -29,7 +29,7 @@ from textwrap import dedent
 import time
 
 
-__version__ = '2.3.8'
+__version__ = '2.3.9'
 
 
 class DescriptionAction(argparse.Action):
