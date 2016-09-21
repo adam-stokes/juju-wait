@@ -139,7 +139,8 @@ def wait_cmd(args=sys.argv[1:]):
         If you need a timeout, use the timeout(1) tool.
         """)
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-e', '--environment', metavar="ENV", type=str,
+    parser.add_argument('-e', '-m', '--environment', '--model',
+                        metavar="MODEL", type=str,
                         action=EnvironmentAction, nargs=1)
     parser.add_argument('--description', action=DescriptionAction, nargs=0)
     parser.add_argument('-q', '--quiet', dest='quiet',
@@ -241,7 +242,8 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                 all_units.add(uname)
                 if 'agent-version' in unit:
                     agent_version[uname] = unit.get('agent-version')
-                elif 'juju-status' in unit and 'version' in unit['juju-status']:
+                elif 'juju-status' in unit and ('version'
+                                                in unit['juju-status']):
                     # agent-version disappeared and was replaced by
                     # a subkey of juju-status some time during the Juju
                     # 2.0 beta cycle.
@@ -265,8 +267,8 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
 
                     if 'agent-version' in sub:
                         agent_version[subname] = sub['agent-version']
-                    elif 'juju-status' in sub and (
-                        'version' in sub['juju-status']):
+                    elif 'juju-status' in sub and ('version' in
+                                                   sub['juju-status']):
                         agent_version[subname] = sub['juju-status']['version']
                     if 'agent-status' in sub and unit['agent-status'] != {}:
                         agent_status[subname] = sub['agent-status']
@@ -303,8 +305,8 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                 message = ''
 
             # Check agent status
-            if (current == 'executing'
-                and message == 'running update-status hook'):
+            if (current == 'executing' and
+                    message == 'running update-status hook'):
                 # update-status is an idle hook event
                 pass
             elif current != 'idle':
