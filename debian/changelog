@@ -1,3 +1,9 @@
+juju-wait (2.3.10) precise; urgency=medium
+
+  * Migrate to git
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Mon, 03 Oct 2016 20:48:19 +0700
+
 juju-wait (2.3.9) precise; urgency=medium
 
   * Extend -e option to work with Juju 2.0 [lutostag]

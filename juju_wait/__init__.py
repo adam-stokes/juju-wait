@@ -29,7 +29,7 @@ from textwrap import dedent
 import time
 
 
-__version__ = '2.3.9'
+__version__ = '2.3.10'
 
 
 class DescriptionAction(argparse.Action):
@@ -135,8 +135,6 @@ def wait_cmd(args=sys.argv[1:]):
         The environment is considered in a steady state once all hooks
         have completed running and there are no hooks queued to run,
         on all units.
-
-        If you need a timeout, use the timeout(1) tool.
         """)
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-e', '-m', '--environment', '--model',
@@ -195,6 +193,14 @@ def reset_logging():
 
 
 def wait(log=None, wait_for_workload=False, max_wait=None):
+    # Note that wait_for_workload is only useful as a workaround for
+    # broken setups. It is impossible for a charm to report that it has
+    # completed setup, because a charm has no information about units
+    # still being provisioned or relations that have not yet been joined.
+    # A charm might report an active state, but there may still be hours
+    # worth of setup hooks to run before it is complete. wait_for_workload
+    # does allow you to ignore infinite hook loops and other similar bugs
+    # in your charms.
     if log is None:
         log = logging.getLogger()
 
@@ -386,6 +392,9 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
             for sname in services:
+                # Note that we only collected services that have 1 or more
+                # units. A service with no units will not have a leader
+                # and this is fine and juju-wait should ignore it.
                 if sname not in services_with_leader:
                     logging.info('{} does not have a leader'.format(sname))
                     ready_since = None
