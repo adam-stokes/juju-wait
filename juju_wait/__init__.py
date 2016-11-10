@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 import json
 import logging
+import multiprocessing.dummy
 import os
 import subprocess
 import sys
@@ -381,14 +382,27 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         # Run last as it can take quite awhile on environments with a
         # large number of services.
         if ready:
+            # Leadership was added in 1.24, so short-circuit to true
+            # anything older.
+            unit_leadership = {
+                uname: (
+                    True if ver and LooseVersion(ver) <= LooseVersion('1.23')
+                    else None)
+                for uname, ver in agent_version.items()}
+            # Ask all the other units in parallel whether they're the leader.
+            # XXX: There should really be a Juju API call that doesn't
+            # involve SSHing to hundreds of hosts.
+            unit_leadership.update(dict(multiprocessing.dummy.Pool(10).map(
+                lambda uname: (uname, get_is_leader(uname)),
+                (uname for uname, leader in unit_leadership.items()
+                 if leader is None))))
+            # Aggregate and log the leader status by service.
             services = set()
             services_with_leader = set()
-            for uname, version in agent_version.items():
+            for uname, is_leader in unit_leadership.items():
                 sname = uname.split('/', 1)[0]
                 services.add(sname)
-                if (sname not in services_with_leader and version and
-                    (LooseVersion(version) <= LooseVersion('1.23') or
-                        get_is_leader(uname) is True)):
+                if sname not in services_with_leader and is_leader:
                     services_with_leader.add(sname)
                     logging.debug('{} is lead by {}'.format(sname, uname))
             for sname in services:
