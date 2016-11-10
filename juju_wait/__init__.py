@@ -22,12 +22,12 @@ from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 import json
 import logging
-import multiprocessing.dummy
 import os
 import subprocess
 import sys
 from textwrap import dedent
 import time
+import yaml
 
 
 __version__ = '2.3.10'
@@ -87,6 +87,17 @@ def juju_run(unit, cmd, timeout=None):
                        '--unit', unit, cmd])
 
 
+def juju_run_many(units, cmd, timeout=None):
+    args = ['juju', 'run', '--format=yaml', '--unit', ','.join(units)]
+    if timeout is not None:
+        args.append('--timeout={}s'.format(timeout))
+    args.extend(['--', cmd])
+    out = yaml.safe_load(run_or_die(args))
+    # XXX: ReturnCode is omitted from the YAML when 0, so assume absence is
+    # success.
+    return {d['UnitId']: (d.get('ReturnCode', 0), d['Stdout']) for d in out}
+
+
 def get_status():
     # Older juju versions don't support --utc, so force UTC timestamps
     # using the environment variable.
@@ -104,9 +115,14 @@ def get_log_tail(unit, timeout=None):
     return juju_run(unit, cmd, timeout=timeout)
 
 
-def get_is_leader(unit, timeout=None):
-    raw = juju_run(unit, 'is-leader --format=json', timeout=timeout)
-    return json.loads(raw)
+def leadership_poll(units):
+    is_leader_results = juju_run_many(units, 'is-leader --format=json')
+    unit_map = {}
+    for unit, (return_code, stdout) in is_leader_results.items():
+        if return_code != 0:
+            raise Exception("Failed to check leadership of {}.".format(unit))
+        unit_map[unit] = json.loads(stdout)
+    return unit_map
 
 
 # Juju 1.24+ provides us with the timestamp the status last changed.
@@ -390,12 +406,9 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                     else None)
                 for uname, ver in agent_version.items()}
             # Ask all the other units in parallel whether they're the leader.
-            # XXX: There should really be a Juju API call that doesn't
-            # involve SSHing to hundreds of hosts.
-            unit_leadership.update(dict(multiprocessing.dummy.Pool(10).map(
-                lambda uname: (uname, get_is_leader(uname)),
-                (uname for uname, leader in unit_leadership.items()
-                 if leader is None))))
+            unit_leadership.update(leadership_poll(
+                uname for uname, leader in unit_leadership.items()
+                if leader is None))
             # Aggregate and log the leader status by service.
             services = set()
             services_with_leader = set()
