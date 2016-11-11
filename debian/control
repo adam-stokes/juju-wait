@@ -7,7 +7,8 @@ Build-Depends:
  python-all (>= 2.6.6-3~),
  python-setuptools,
  python3-all,
- python3-setuptools
+ python3-setuptools,
+ python3-yaml
 Standards-Version: 3.9.3
 X-Python3-Version: >= 3.2
 
@@ -16,6 +17,7 @@ Architecture: all
 Depends:
  ${python3:Depends},
  ${misc:Depends},
+ python3-yaml,
  juju-core (>= 1.18.0) | juju (>= 2.0)
 Description: Juju plugin to wait for environment steady state.
  This plugin provides the following new juju command:

@@ -30,7 +30,7 @@ import time
 import yaml
 
 
-__version__ = '2.3.10'
+__version__ = '2.4.0'
 
 
 class DescriptionAction(argparse.Action):

@@ -1,3 +1,10 @@
+juju-wait (2.4.0) precise; urgency=medium
+
+  * Perform leadership checks in parallel
+  * Add python3-yaml as explicit dependency
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Fri, 11 Nov 2016 16:44:49 +0700
+
 juju-wait (2.3.10) precise; urgency=medium
 
   * Migrate to git
