@@ -397,7 +397,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         # one will be appointed soon and hooks should kick off.
         # Run last as it can take quite awhile on environments with a
         # large number of services.
-        if ready:
+        if ready and agent_version:
             # Leadership was added in 1.24, so short-circuit to true
             # anything older.
             unit_leadership = {
