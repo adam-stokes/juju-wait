@@ -26,3 +26,8 @@ override_dh_auto_install:
 		--root=$(CURDIR)/debian/juju-wait \
 		--no-compile --install-layout=deb; \
 	done
+
+# override_dh_auto_clean:
+# 	set -ex; for python in $(shell py3versions -r); do \
+# 	    $$python setup.py clean -a; \
+# 	done;
