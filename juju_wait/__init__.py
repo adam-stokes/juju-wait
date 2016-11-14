@@ -88,6 +88,7 @@ def juju_run(unit, cmd, timeout=None):
 
 
 def juju_run_many(units, cmd, timeout=None):
+    units = list(units)
     if not units:
         return {}
     args = ['juju', 'run', '--format=yaml', '--unit', ','.join(units)]
