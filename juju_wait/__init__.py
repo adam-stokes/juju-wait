@@ -30,7 +30,7 @@ import time
 import yaml
 
 
-__version__ = '2.4.0'
+__version__ = '2.4.1'
 
 
 class DescriptionAction(argparse.Action):
@@ -96,7 +96,7 @@ def juju_run_many(units, cmd, timeout=None):
         args.append('--timeout={}s'.format(timeout))
     args.extend(['--', cmd])
     out = yaml.safe_load(run_or_die(args))
-    # XXX: ReturnCode is omitted from the YAML when 0, so assume absence is
+    # ReturnCode is omitted from the YAML when 0, so assume absence is
     # success.
     return {d['UnitId']: (d.get('ReturnCode', 0), d['Stdout']) for d in out}
 
@@ -256,16 +256,18 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         # logs sniffed because they are running Juju 1.23 or earlier.
         ready_units = {}
 
-        # Flattened agent and workload status for all units and subordinates
-        # that provide it. Note that 'agent status' is only available in
-        # Juju 1.24 and later. This is easily confused with 'agent state'
-        # which is available in earlier versions of Juju.
+        # Flattened agent and workload status and leadership for all units
+        # and subordinates that provide it. Note that 'agent status' is only
+        # available in Juju 1.24 and later. This is easily confused with
+        # 'agent state' which is available in earlier versions of Juju.
         workload_status = {}
         agent_status = {}
         agent_version = {}
+        unit_leadership = {}
         for sname, service in services.items():
             for uname, unit in service.get('units', {}).items():
                 all_units.add(uname)
+                unit_leadership[uname] = unit.get('leader', None)
                 if 'agent-version' in unit:
                     agent_version[uname] = unit.get('agent-version')
                 elif 'juju-status' in unit and ('version'
@@ -287,6 +289,7 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                 else:
                     ready_units[uname] = unit  # Schedule for sniffing.
                 for subname, sub in unit.get('subordinates', {}).items():
+                    unit_leadership[subname] = sub.get('leader', None)
                     if ('workload-status' in sub and
                             'current' in sub['workload-status']):
                         workload_status[subname] = sub['workload-status']
@@ -403,15 +406,16 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         if ready:
             # Leadership was added in 1.24, so short-circuit to true
             # anything older.
-            unit_leadership = {
-                uname: (
-                    True if ver and LooseVersion(ver) <= LooseVersion('1.23')
-                    else None)
-                for uname, ver in agent_version.items()}
+            unit_leadership.update(
+                {uname: True
+                 for uname, ver in agent_version.items()
+                 if ver and LooseVersion(ver) < LooseVersion('1.24')})
+
             # Ask all the other units in parallel whether they're the leader.
             unit_leadership.update(leadership_poll(
                 uname for uname, leader in unit_leadership.items()
                 if leader is None))
+
             # Aggregate and log the leader status by service.
             services = set()
             services_with_leader = set()

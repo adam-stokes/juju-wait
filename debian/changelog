@@ -1,3 +1,9 @@
+juju-wait (2.4.1) precise; urgency=medium
+
+  * Extract leadership information from status, if available
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Wed, 16 Nov 2016 14:20:06 +0700
+
 juju-wait (2.4.0) precise; urgency=medium
 
   * Perform leadership checks in parallel
