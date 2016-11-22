@@ -30,7 +30,7 @@ import time
 import yaml
 
 
-__version__ = '2.4.1'
+__version__ = '2.4.2'
 
 
 class DescriptionAction(argparse.Action):
@@ -309,6 +309,9 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                         ready_units[subname] = sub  # Schedule for sniffing.
 
         for uname, wstatus in sorted(workload_status.items()):
+            if not ('current' in wstatus and 'since' in wstatus):
+                ready = False
+                continue
             current = wstatus['current']
             since = parse_ts(wstatus['since'])
 
@@ -326,6 +329,9 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
                 raise JujuWaitException(1)
 
         for uname, astatus in sorted(agent_status.items()):
+            if not ('current' in astatus and 'since' in astatus):
+                ready = False
+                continue
             current = astatus['current']
             since = parse_ts(astatus['since'])
             if 'message' in astatus:
