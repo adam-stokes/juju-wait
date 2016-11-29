@@ -121,10 +121,21 @@ def get_log_tail(unit, timeout=None):
 def leadership_poll(units):
     is_leader_results = juju_run_many(units, 'is-leader --format=json')
     unit_map = {}
+    failed = False
     for unit, (return_code, stdout) in is_leader_results.items():
         if return_code != 0:
-            raise Exception("Failed to check leadership of {}.".format(unit))
-        unit_map[unit] = json.loads(stdout)
+            logging.error("{} has failed. Unable to run leadership check."
+                          "".format(unit))
+            failed = True
+            continue
+        try:
+            unit_map[unit] = json.loads(stdout)
+        except ValueError:
+            logging.error("{} has failed. Insane output from commands."
+                          "".format(unit))
+            failed = True
+    if failed:
+        raise JujuWaitException(44)
     return unit_map
 
 
