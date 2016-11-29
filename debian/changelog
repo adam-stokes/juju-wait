@@ -1,3 +1,9 @@
+juju-wait (2.4.3) precise; urgency=medium
+
+  * Improve reporting when 'juju run' fails
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Tue, 29 Nov 2016 20:15:05 +0700
+
 juju-wait (2.4.2) precise; urgency=medium
 
   * Handle missing status information, avoiding races with Juju
