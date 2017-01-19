@@ -11,6 +11,7 @@ Build-Depends:
  python3-setuptools,
  python3-yaml
 Standards-Version: 3.9.3
+X-Python3-Version: >= 3.4
 
 Package: juju-wait
 Architecture: all

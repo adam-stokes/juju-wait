@@ -10,24 +10,7 @@
 #export DH_VERBOSE=1
 
 export PYBUILD_NAME=juju_wait
+export DEBPYTHON_SUPPORTED=3.2,3.3,3.4,3.5,3.6
 
 %:
-	dh $@ --with=python3
-
-override_dh_auto_build:
-	dh_auto_build
-	set -ex; for python in $(shell py3versions -r); do \
-	    $$python setup.py build; \
-	done;
-
-override_dh_auto_install:
-	set -ex; for python in $(shell py3versions -r); do \
-	    $$python setup.py install --force \
-		--root=$(CURDIR)/debian/juju-wait \
-		--no-compile --install-layout=deb; \
-	done
-
-# override_dh_auto_clean:
-# 	set -ex; for python in $(shell py3versions -r); do \
-# 	    $$python setup.py clean -a; \
-# 	done;
+	dh $@ --with=python3 --without-python2
