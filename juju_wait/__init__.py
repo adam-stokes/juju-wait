@@ -434,14 +434,20 @@ def wait(log=None, wait_for_workload=False, max_wait=None):
         # Run last as it can take quite awhile on environments with a
         # large number of services.
         if ready:
-            # Leadership was added in 1.24, so short-circuit to true
-            # anything older.
-            unit_leadership.update(
-                {uname: True
-                 for uname, ver in agent_version.items()
-                 if ver and LooseVersion(ver) < LooseVersion('1.24')})
+            for uname, ver in agent_version.items():
+                if ver and LooseVersion(ver) < LooseVersion('1.24'):
+                    # Leadership was added in 1.24, so short-circuit to true
+                    # anything older.
+                    unit_leadership[uname] = True
+                elif (ver and LooseVersion(ver) >= LooseVersion('2.1') and
+                      unit_leadership[uname] is None):
+                    # Leadership is set in the status output
+                    # only when leader = True
+                    # Avoid the costly juju run when unnecessary
+                    unit_leadership[uname] = False
 
-            # Ask all the other units in parallel whether they're the leader.
+            # Ask all the other units in parallel whether they're the
+            # leader if leader is not set.
             unit_leadership.update(leadership_poll(
                 uname for uname, leader in unit_leadership.items()
                 if leader is None))
