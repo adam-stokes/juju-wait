@@ -77,7 +77,20 @@ def run_or_die(cmd, env=None):
 
 
 def juju_exe():
-    return 'juju'
+    # Allow override using environment variable(s)
+    if os.environ.get('JUJU_BINARY'):
+        # JUJU_BINARY can be a full path: /path/to/juju
+        juju = os.environ.get('JUJU_BINARY')
+    elif os.environ.get('JUJU_VERSION'):
+        # JUJU_VERSION can specify just the version
+        # and select from juju-$VER in PATH
+        ver = (".".join(os.environ.get('JUJU_VERSION')
+               .split('-')[0].split('.')[:2]))
+        juju = 'juju-{}'.format(ver)
+    else:
+        # Default to juju in PATH
+        juju = 'juju'
+    return juju
 
 
 def juju_run(unit, cmd, timeout=None):
@@ -91,7 +104,7 @@ def juju_run_many(units, cmd, timeout=None):
     units = list(units)
     if not units:
         return {}
-    args = ['juju', 'run', '--format=yaml', '--unit', ','.join(units)]
+    args = [juju_exe(), 'run', '--format=yaml', '--unit', ','.join(units)]
     if timeout is not None:
         args.append('--timeout={}s'.format(timeout))
     args.extend(['--', cmd])
