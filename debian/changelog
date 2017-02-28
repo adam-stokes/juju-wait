@@ -1,3 +1,10 @@
+juju-wait (2.5.0) precise; urgency=medium
+
+  * Speedup leadership test with Juju 2.1
+  * Allow override of Juju binary path using environment variables
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Tue, 28 Feb 2017 23:01:08 +0700
+
 juju-wait (2.4.3) precise; urgency=medium
 
   * Improve reporting when 'juju run' fails
