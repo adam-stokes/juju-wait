@@ -15,20 +15,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from setuptools import setup, find_packages
 from codecs import open
 from os import path
-
-import juju_wait
+import re
+from setuptools import setup, find_packages
 
 here = path.abspath(path.dirname(__file__))
+version = re.search(r'''(?m)^__version__\s*=\s*['"]([\d\.]+)''',
+                    open('juju_wait/__init__.py', 'r').read()).group(1)
 
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
     name='juju-wait',
-    version=juju_wait.__version__,
+    version=version,
     packages=find_packages(),
     author='Stuart Bishop',
     author_email='stuart.bishop@canonical.com',
@@ -47,5 +48,5 @@ setup(
                  'Topic :: Utilities',
                  'Programming Language :: Python :: 3'],
     keywords='juju',
-    install_requires=[],
+    install_requires=['PyYAML'],
     entry_points={'console_scripts': ['juju-wait = juju_wait:wait_cmd']})
